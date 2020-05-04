@@ -93,12 +93,14 @@ void ofApp::draw(){
                 bodyLine = bodyLine.getSmoothed(50);
                 ofSetColor(color);
                 bodyLine.draw();
-                history.push_back(bodyLine);
                 
+                //store the outline to an array of 30 lines maximum
+                history.push_back(bodyLine);
                 if(history.size()>30){
                     history.erase(history.begin());
                 }
                 
+                //take the outline out of the array
                 for(int i=0; i<history.size();i+=3){
                     history[i].draw();
                 }
@@ -117,19 +119,20 @@ void ofApp::draw(){
                 
                 int numberOfPoints = 50;
 
+                //create an array of trails
                 for(int i=0; i<numberOfPoints; i++){
                     trails.push_back(pointTrail);
                 }
 
                 int counter=0;
                 ofSetColor(color);
-                
+                //get evenly spaced points on the outline
                 for (int p=0; p<100; p+= (100/numberOfPoints)) {
                     
                     ofVec3f point = bodyLine.getPointAtPercent(p/100.0);
                     float floatIndex = bodyLine.getIndexAtPercent(p/100.0);
 //                    ofDrawCircle(point, 5);
-                    
+                    //draw trail from each point no longer than 70
                     trails[counter].addVertex(point);
                     trails[counter] = trails[counter].getSmoothed(3);
                     trails[counter].draw();
@@ -141,7 +144,6 @@ void ofApp::draw(){
 
                 }
                    
-              
                     
 //                    //Fill in color
 //                    ofPath bodyLinePath;
