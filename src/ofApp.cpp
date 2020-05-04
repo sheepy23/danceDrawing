@@ -6,17 +6,22 @@ void ofApp::setup(){
     clear.addListener(this, &ofApp::clearPressed);
     learn.addListener(this, &ofApp::learnPressed);
     save.addListener(this, &ofApp::savePressed);
+    mode1.addListener(this, &ofApp::mode1Pressed);
+    mode2.addListener(this, &ofApp::mode2Pressed);
+    mode3.addListener(this, &ofApp::mode3Pressed);
     
     gui.setup();
-    gui.add(learn.setup("Learn"));
     gui.add(threshold.setup("Threshold",100,0,300));
+    gui.add(learn.setup("Learn Background"));
+    gui.add(mode1.setup("Mode 1"));
+    gui.add(mode2.setup("Mode 2"));
+//    gui.add(mode3.setup)("Mode 3");
     gui.add(clear.setup("Clear"));
     gui.add(save.setup("Save Image"));
     
 //    XML.setValue("settings:number", 11);
 //    XML.saveFile("mySettings.xml");
     
-    // How to full screen?
     webcam.setup(ofGetWindowWidth(),ofGetWindowHeight());
 //    webcam.setup(1024,768);
 
@@ -27,7 +32,9 @@ void ofApp::setup(){
     //    ofxCv::imitate(diff, webcam);
     
     drawMode = 1;
-    
+    color = ofColor(255,255,255,150);
+    ofEnableAlphaBlending();
+   
 
 }
 
@@ -45,7 +52,16 @@ void ofApp::update(){
         finder.findContours(diff);
         
     }
-
+  
+// How to fade out over time?
+//        float time = ofGetElapsedTimef();
+//        color = ofColor(255,255,255,255);
+//        ofColor white = ofColor(255,255,255,255);
+//        color.set(white);
+//        ofColor fade = ofColor(255,255,255,0);
+//        colorUpdate.lerp(fade,time);
+//        ofSetColor(color);
+    
 }
 
 //--------------------------------------------------------------
@@ -68,14 +84,14 @@ void ofApp::draw(){
     
     switch (drawMode){
             
-            // Outline Trail
+        // Outline Copy
         case 1: {
             
             if (finder.size() > 0){
-                
-                
+ 
                 bodyLine = finder.getPolyline(0);
                 bodyLine = bodyLine.getSmoothed(50);
+                ofSetColor(color);
                 bodyLine.draw();
                 history.push_back(bodyLine);
                 
@@ -83,46 +99,74 @@ void ofApp::draw(){
                     history.erase(history.begin());
                 }
                 
-                for(int i=0; i<history.size();i++){
+                for(int i=0; i<history.size();i+=3){
                     history[i].draw();
-                    i = i+2;
                 }
+                
                 break;
             }
             
             
-            // Outline Points Trail (TBD)
-            // How to get points on the outline of equal interval while the outline is updating?
-            // How to draw the trail of each points?
+        // Outline Points Trail
         case 2: {
             if (finder.size() > 0){
                 
                 bodyLine = finder.getPolyline(0);
                 bodyLine = bodyLine.getSmoothed(50);
-                bodyLine.draw();
+//                bodyLine.draw();
                 
-                for(int i=0; i<bodyLine.size(); i++){
-                    points.push_back(bodyLine[i]);
-                    ofDrawCircle(bodyLine[i],5);
-                    ofSetColor(255);
-                    i = i+100;
+                int numberOfPoints = 50;
+
+                for(int i=0; i<numberOfPoints; i++){
+                    trails.push_back(pointTrail);
                 }
+
+                int counter=0;
+                ofSetColor(color);
                 
-                for(int i=0; i<points.size(); i++){
-                    myLine.addVertex(points[i]);
-                    myLine.draw();
+                for (int p=0; p<100; p+= (100/numberOfPoints)) {
+                    
+                    ofVec3f point = bodyLine.getPointAtPercent(p/100.0);
+                    float floatIndex = bodyLine.getIndexAtPercent(p/100.0);
+//                    ofDrawCircle(point, 5);
+                    
+                    trails[counter].addVertex(point);
+                    trails[counter] = trails[counter].getSmoothed(3);
+                    trails[counter].draw();
+                    
+                    if(trails[counter].size()>70){
+                        trails[counter].getVertices().erase( trails[counter].getVertices().begin());
+                    }
+                    counter++;
+
                 }
+                   
+              
+                    
+//                    //Fill in color
+//                    ofPath bodyLinePath;
+//                    for(int i=0; i<bodyLine.getVertices().size();i++){
+//                        if(i == 0){
+//                            bodyLinePath.newSubPath();
+//                            bodyLinePath.moveTo(bodyLine.getVertices()[i]);
+//                        } else {
+//                            bodyLinePath.lineTo(bodyLine.getVertices()[i]);
+//                        }
+//                    }
+//                    bodyLinePath.close();
+//                    //                bodyLinePath.setFillColor(255);
+//                    bodyLinePath.draw();
+//                }
                 
+  
                 
             }
             break;
         }
             
-            // PoseNet (TBD)
+        // PoseNet (TBD)
         case 3: {
-            
-            
-            
+                
             break;
         }
             
@@ -155,19 +199,32 @@ void ofApp::savePressed(){
     screenShot.grabScreen(0,0,ofGetWindowWidth(),ofGetWindowHeight());
     screenShot.save(ofGetTimestampString() + ".jpg", OF_IMAGE_QUALITY_HIGH);
 }
-
-
-
-
-
-
-
+//--------------------------------------------------------------
+void ofApp::mode1Pressed(){
+    drawMode = 1;
+    history.clear();
+    trails.clear();
+};
+//--------------------------------------------------------------
+void ofApp::mode2Pressed(){
+    drawMode = 2;
+    history.clear();
+    trails.clear();
+};
+//--------------------------------------------------------------
+void ofApp::mode3Pressed(){
+    drawMode = 3;
+    history.clear();
+    trails.clear();
+};
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     
     if (key == ' '){
         ofxCv::copy(webcam, background);
         background.update();
+        history.clear();
+        trails.clear();
     }
     
     if (key == 's' || key == 'S'){
@@ -177,21 +234,25 @@ void ofApp::keyPressed(int key){
     
     if (key == 'l'){
         history.clear();
+        trails.clear();
     }
     
     if (key == '1'){
         drawMode = 1;
         history.clear();
+        trails.clear();
     }
     
     if (key == '2'){
         drawMode = 2;
         history.clear();
+        trails.clear();
     }
     
     if (key == '3'){
         drawMode = 3;
         history.clear();
+        trails.clear();
     }
     
 
