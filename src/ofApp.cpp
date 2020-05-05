@@ -9,6 +9,9 @@ void ofApp::setup(){
     mode1.addListener(this, &ofApp::mode1Pressed);
     mode2.addListener(this, &ofApp::mode2Pressed);
     mode3.addListener(this, &ofApp::mode3Pressed);
+//    mode1.addListener(this, &ofApp::modePressed('1'));
+//    mode2.addListener(this, &ofApp::modePressed('2'));
+//    mode3.addListener(this, &ofApp::modePressed('3'));
     
     gui.setup();
     gui.add(threshold.setup("Threshold",100,0,300));
@@ -19,28 +22,42 @@ void ofApp::setup(){
     gui.add(clear.setup("Clear"));
     gui.add(save.setup("Save Image"));
     
-//    XML.setValue("settings:number", 11);
-//    XML.saveFile("mySettings.xml");
-    
-    webcam.setup(ofGetWindowWidth(),ofGetWindowHeight());
-//    webcam.setup(1024,768);
+    ofBackground(0);
 
+#ifdef USE_LIVE
+//    screenRect = ofRectangle(0, 0, ofGetWidth(), ofGetHeight());
+//    videoRect = ofRectangle(0, 0, webcam.getWidth(), webcam.getHeight());
+//    videoFullscreenRect = videoRect;
+//    videoFullscreenRect.scaleTo(screenRect, OF_ASPECT_RATIO_KEEP_BY_EXPANDING);
+    webcam.setup(ofGetWindowWidth(),ofGetWindowHeight());
     
+    
+    //    webcam.setup(1024,768);
     //    webcam.setup(640, 480);
     //    // imitate() will set up bg and diff, so they have the same size and type as cam
     //    ofxCv::imitate(background, webcam);
     //    ofxCv::imitate(diff, webcam);
+#else
+    player.load("testDemo.mov");
+    
+    screenRect = ofRectangle(0, 0, ofGetWidth(), ofGetHeight());
+    videoRect = ofRectangle(0, 0, player.getWidth(), player.getHeight());
+    videoFullscreenRect = videoRect;
+    videoFullscreenRect.scaleTo(screenRect, OF_ASPECT_RATIO_KEEP_BY_EXPANDING);
+    
+    player.play();
+#endif
     
     drawMode = 1;
     color = ofColor(255,255,255,150);
-    ofEnableAlphaBlending();
-   
+    
 
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
     
+#ifdef USE_LIVE
 
     webcam.update();
     
@@ -52,26 +69,40 @@ void ofApp::update(){
         finder.findContours(diff);
         
     }
-  
-// How to fade out over time?
-//        float time = ofGetElapsedTimef();
-//        color = ofColor(255,255,255,255);
-//        ofColor white = ofColor(255,255,255,255);
-//        color.set(white);
-//        ofColor fade = ofColor(255,255,255,0);
-//        colorUpdate.lerp(fade,time);
-//        ofSetColor(color);
+
+#else
+    player.update();
+    
+    if(player.isFrameNew()){
+        ofxCv::absdiff(player, background, diff);
+        diff.update();
+        finder.setSortBySize(true);
+        finder.setThreshold(threshold);
+        finder.findContours(diff);
+    }
+#endif
+    
+    
+    
     
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-    // How to full screen?
     // How to grayscale video?
-    // Why the saved screenshot is blue?
     ofSetColor(60);
+    
+#ifdef USE_LIVE
     webcam.draw(0,0);
+//    webcam.draw(videoFullscreenRect);
+
+#else
+//    player.draw(0,0);
+    player.draw(videoFullscreenRect);
+
+#endif
+    
     ofSetColor(255);
     gui.draw();
     
@@ -100,8 +131,10 @@ void ofApp::draw(){
                     history.erase(history.begin());
                 }
                 
-                //take the outline out of the array
-                for(int i=0; i<history.size();i+=3){
+                //take the outline out of the array and add alpha effect
+                for(int i=0; i<history.size(); i+=3){
+                    float color = ofMap(i,0,history.size(),0,255);
+                    ofSetColor(255,255,255,color);
                     history[i].draw();
                 }
                 
@@ -135,7 +168,15 @@ void ofApp::draw(){
                     //draw trail from each point no longer than 70
                     trails[counter].addVertex(point);
                     trails[counter] = trails[counter].getSmoothed(3);
-                    trails[counter].draw();
+//                    trails[counter].draw();
+                    ofMesh myMesh;
+                    myMesh.setMode(OF_PRIMITIVE_LINE_STRIP);
+                    for(int j=0; j<trails[counter].size(); j++){
+                        myMesh.addVertex(trails[counter][j]);
+                        myMesh.addColor(ofColor(255,255,255,ofMap(j,0,trails[counter].size(),0,255)));
+                        
+                    }
+                    myMesh.draw();
                     
                     if(trails[counter].size()>70){
                         trails[counter].getVertices().erase( trails[counter].getVertices().begin());
@@ -193,7 +234,13 @@ void ofApp::clearPressed(){
 }
 //--------------------------------------------------------------
 void ofApp::learnPressed(){
+    
+#ifdef USE_LIVE
     ofxCv::copy(webcam, background);
+#else
+    ofxCv::copy(player, background);
+#endif
+    
     background.update();
 }
 //--------------------------------------------------------------
@@ -202,6 +249,7 @@ void ofApp::savePressed(){
     screenShot.save(ofGetTimestampString() + ".jpg", OF_IMAGE_QUALITY_HIGH);
 }
 //--------------------------------------------------------------
+
 void ofApp::mode1Pressed(){
     drawMode = 1;
     history.clear();
@@ -219,11 +267,25 @@ void ofApp::mode3Pressed(){
     history.clear();
     trails.clear();
 };
+
+//--------------------------------------------------------------
+
+//void ofApp::modePressed(int newDrawMode){
+//    drawMode = newDrawMode;
+//    history.clear();
+//    trails.clear();
+//}
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     
     if (key == ' '){
+        
+#ifdef USE_LIVE
         ofxCv::copy(webcam, background);
+#else
+        ofxCv::copy(player, background);
+#endif
         background.update();
         history.clear();
         trails.clear();
@@ -231,7 +293,7 @@ void ofApp::keyPressed(int key){
     
     if (key == 's' || key == 'S'){
         screenShot.grabScreen(0,0,ofGetWindowWidth(),ofGetWindowHeight());
-        screenShot.save(ofGetTimestampString() + ".jpg", OF_IMAGE_QUALITY_HIGH);
+        screenShot.save(ofGetTimestampString() + ".png", OF_IMAGE_QUALITY_HIGH);
     }
     
     if (key == 'l'){
@@ -244,19 +306,23 @@ void ofApp::keyPressed(int key){
         history.clear();
         trails.clear();
     }
-    
+
     if (key == '2'){
         drawMode = 2;
         history.clear();
         trails.clear();
     }
-    
+
     if (key == '3'){
         drawMode = 3;
         history.clear();
         trails.clear();
     }
     
+    
+//    if (key == '1'|| key == '2' || key == '3'){
+//        modePressed(key);
+//    }
 
 }
 

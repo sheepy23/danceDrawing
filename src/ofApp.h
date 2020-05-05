@@ -6,6 +6,8 @@
 #include "ofxOpenCv.h"
 #include "ofxXmlSettings.h"
 
+//#define USE_LIVE
+
 class ofApp : public ofBaseApp{
 
 	public:
@@ -28,6 +30,7 @@ class ofApp : public ofBaseApp{
         void learnPressed();
         void clearPressed();
         void savePressed();
+//        void ofApp::modePressed();
         void mode1Pressed();
         void mode2Pressed();
         void mode3Pressed();
@@ -44,9 +47,20 @@ class ofApp : public ofBaseApp{
     
     ofxXmlSettings XML;
     
+    ofRectangle screenRect;
+    ofRectangle videoRect;
+    ofRectangle videoFullscreenRect;
+    
+ 
+#ifdef USE_LIVE
     ofVideoGrabber webcam;
+#else
+    ofVideoPlayer player;
+#endif
+    
     ofImage background;
     ofImage diff;
+    ofRectangle original;
     ofxCv::ContourFinder finder;
     ofxCvGrayscaleImage processedImg;
     
