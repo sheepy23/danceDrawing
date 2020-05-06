@@ -6,6 +6,8 @@
 #include "ofxOpenCv.h"
 #include "ofxXmlSettings.h"
 
+//#define USE_LIVE
+
 class ofApp : public ofBaseApp{
 
 	public:
@@ -28,6 +30,10 @@ class ofApp : public ofBaseApp{
         void learnPressed();
         void clearPressed();
         void savePressed();
+//        void ofApp::modePressed();
+        void mode1Pressed();
+        void mode2Pressed();
+        void mode3Pressed();
     
 
     ofxPanel gui;
@@ -35,21 +41,39 @@ class ofApp : public ofBaseApp{
     ofxButton clear;
     ofxButton learn;
     ofxButton save;
+    ofxButton mode1;
+    ofxButton mode2;
+    ofxButton mode3;
     
     ofxXmlSettings XML;
     
+    ofRectangle screenRect;
+    ofRectangle videoRect;
+    ofRectangle videoFullscreenRect;
+    
+ 
+#ifdef USE_LIVE
     ofVideoGrabber webcam;
+#else
+    ofVideoPlayer player;
+#endif
+    
     ofImage background;
     ofImage diff;
+    ofRectangle original;
     ofxCv::ContourFinder finder;
     ofxCvGrayscaleImage processedImg;
     
     ofImage screenShot;
     
-    ofPolyline myLine;
+
     ofPolyline bodyLine;
     vector <ofPoint> points; //array of points on an outline
     vector <ofPolyline> history; //array of outlines
+//    ofPolyline myLine;
+    ofPolyline pointTrail;
+    vector <ofPolyline> trails;
     int drawMode;
+    ofColor color;
     
 };
